@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.database import engine, Base
+from app.api.v1.router import api_router
 
 
 @asynccontextmanager
@@ -40,3 +41,6 @@ async def health():
         "app": settings.app_name,
         "environment": settings.environment,
     }
+
+
+app.include_router(api_router)
