@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { runAgent, type ChatMessage } from "@/lib/api/agents";
+import { runAgent, getSessionHistory, saveAgentMessage, type ChatMessage } from "@/lib/api/agents";
 import type { Trip } from "@/types/trip";
 
 const AGENTS = ["Coordinator", "Destination", "Budget", "Hotel", "Itinerary"];
@@ -14,8 +14,26 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    async function loadHistory() {
+      try {
+        const history = await getSessionHistory(trip.id);
+        if (history.session_id) {
+          setSessionId(history.session_id);
+          setMessages(history.messages);
+        }
+      } catch {
+        // sem histórico
+      } finally {
+        setLoadingHistory(false);
+      }
+    }
+    loadHistory();
+  }, [trip.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -29,7 +47,11 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
     setInput("");
     setLoading(true);
 
-    const agentMessage: ChatMessage = { role: "agent", content: "", agent_name: "Coordinator" };
+    const agentMessage: ChatMessage = {
+      role: "agent",
+      content: "",
+      agent_name: "Coordinator",
+    };
     setMessages((prev) => [...prev, agentMessage]);
 
     try {
@@ -47,9 +69,20 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
             return updated;
           });
         },
-        (newSessionId) => {
-          setSessionId(newSessionId);
-        },
+(newSessionId, agentName) => {
+  setSessionId(newSessionId);
+  setMessages((prev) => {
+    const updated = [...prev];
+    const lastMsg = updated[updated.length - 1];
+    const updatedMsg = { ...lastMsg, agent_name: agentName };
+    updated[updated.length - 1] = updatedMsg;
+
+    // Salva no banco após streaming completo
+    saveAgentMessage(newSessionId, agentName, lastMsg.content);
+
+    return updated;
+  });
+},
       );
     } catch {
       setMessages((prev) => {
@@ -88,42 +121,55 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
 
         <div className="grid grid-cols-3 gap-6">
 
-          {/* Chat */}
           <div className="col-span-2 rounded-lg border bg-card flex flex-col" style={{ height: "600px" }}>
-            <div className="p-4 border-b">
+            <div className="p-4 border-b flex items-center justify-between">
               <h2 className="font-semibold">AI Agent Chat</h2>
+              {sessionId && (
+                <span className="text-xs text-muted-foreground">
+                  Session active
+                </span>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.length === 0 && (
+              {loadingHistory ? (
+                <div className="text-center py-16 text-muted-foreground text-sm">
+                  Loading history...
+                </div>
+              ) : messages.length === 0 ? (
                 <div className="text-center py-16 text-muted-foreground">
                   <div className="text-4xl mb-3">🤖</div>
                   <p className="font-medium">Agents ready</p>
                   <p className="text-sm mt-1">Ask anything about your trip</p>
                 </div>
-              )}
-
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[80%] rounded-lg px-4 py-2 text-sm ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground"
-                  }`}>
-                    {msg.role === "agent" && (
-                      <div className="text-xs font-medium mb-1 opacity-70">
-                        {msg.agent_name ?? "Agent"}
-                      </div>
-                    )}
-                    <div className="whitespace-pre-wrap">
-                      {msg.content}
-                      {loading && i === messages.length - 1 && msg.role === "agent" && (
-                        <span className="inline-block w-1 h-4 ml-1 bg-current animate-pulse" />
+              ) : (
+                messages.map((msg, i) => (
+                  <div
+                    key={i}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[80%] rounded-lg px-4 py-2 text-sm ${
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-foreground"
+                      }`}
+                    >
+                      {msg.role === "agent" && (
+                        <div className="text-xs font-medium mb-1 opacity-70">
+                          {msg.agent_name ?? "Agent"}
+                        </div>
                       )}
+                      <div className="whitespace-pre-wrap">
+                        {msg.content}
+                        {loading && i === messages.length - 1 && msg.role === "agent" && (
+                          <span className="inline-block w-1 h-4 ml-1 bg-current animate-pulse" />
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
               <div ref={bottomRef} />
             </div>
 
@@ -133,16 +179,15 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
                 placeholder="Ask about your trip..."
-                disabled={loading}
+                disabled={loading || loadingHistory}
                 className="flex-1"
               />
-              <Button onClick={handleSend} disabled={loading || !input.trim()}>
+              <Button onClick={handleSend} disabled={loading || !input.trim() || loadingHistory}>
                 {loading ? "..." : "Send"}
               </Button>
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-4">
             <div className="rounded-lg border bg-card p-4">
               <h3 className="font-semibold text-sm mb-3">Trip Details</h3>

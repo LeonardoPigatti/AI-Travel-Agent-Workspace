@@ -1,5 +1,7 @@
 import sys
+import uuid
 from pathlib import Path
+from app.schemas.agent import AgentRunRequest, SaveMessageRequest
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -14,6 +16,43 @@ from app.repositories.trip_repository import TripRepository
 sys.path.insert(0, str(Path(__file__).parents[6] / "services" / "ai-agents"))
 
 router = APIRouter(prefix="/agents", tags=["agents"])
+
+@router.get("/sessions/{trip_id}")
+async def get_session_messages(
+    trip_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy.orm import selectinload
+
+    result = await db.execute(
+        select(AgentSession)
+        .where(AgentSession.trip_id == trip_id)
+        .order_by(AgentSession.created_at.desc())
+        .limit(1)
+    )
+    session = result.scalar_one_or_none()
+
+    if not session:
+        return {"session_id": None, "messages": []}
+
+    messages_result = await db.execute(
+        select(Message)
+        .where(Message.session_id == session.id)
+        .order_by(Message.created_at.asc())
+    )
+    messages = messages_result.scalars().all()
+
+    return {
+        "session_id": str(session.id),
+        "messages": [
+            {
+                "role": msg.role,
+                "content": msg.content,
+                "agent_name": msg.agent_name,
+            }
+            for msg in messages
+        ],
+    }
 
 NODE_NAME_MAP = {
     "destination_node": "Destination",
@@ -103,15 +142,6 @@ async def run_agent(
                     full_response += token
                     yield f"data: {token}\n\n"
 
-        async with db.begin_nested():
-            agent_msg = Message(
-                session_id=session_id,
-                role="agent",
-                agent_name=agent_name,
-                content=full_response,
-            )
-            db.add(agent_msg)
-
         yield f"data: [DONE]\n\n"
         yield f"data: [SESSION:{session_id}]\n\n"
 
@@ -123,3 +153,19 @@ async def run_agent(
             "X-Accel-Buffering": "no",
         },
     )
+
+@router.post("/sessions/{session_id}/messages")
+async def save_agent_message(
+    session_id: uuid.UUID,
+    request: SaveMessageRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    message = Message(
+        session_id=session_id,
+        role="agent",
+        agent_name=request.agent_name,
+        content=request.content,
+    )
+    db.add(message)
+    await db.flush()
+    return {"ok": True}

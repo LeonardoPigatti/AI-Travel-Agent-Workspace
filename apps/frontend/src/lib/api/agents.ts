@@ -4,6 +4,19 @@ export interface ChatMessage {
   agent_name?: string;
 }
 
+export interface SessionHistory {
+  session_id: string | null;
+  messages: ChatMessage[];
+}
+
+export async function getSessionHistory(tripId: string): Promise<SessionHistory> {
+  const res = await fetch(
+    `http://localhost:8000/api/v1/agents/sessions/${tripId}`
+  );
+  if (!res.ok) return { session_id: null, messages: [] };
+  return res.json();
+}
+
 export async function runAgent(
   tripId: string,
   message: string,
@@ -51,4 +64,18 @@ export async function runAgent(
       onToken(data);
     }
   }
+}
+export async function saveAgentMessage(
+  sessionId: string,
+  agentName: string,
+  content: string,
+): Promise<void> {
+  await fetch(
+    `http://localhost:8000/api/v1/agents/sessions/${sessionId}/messages`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ agent_name: agentName, content }),
+    }
+  );
 }
