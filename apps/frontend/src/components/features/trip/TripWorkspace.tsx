@@ -179,6 +179,89 @@ function DestinationMap({ destination }: { destination: string }) {
   );
 }
 
+function BookingLinks({ trip }: { trip: Trip }) {
+  const dest = encodeURIComponent(trip.destination.split(",")[0].trim());
+  const destFull = encodeURIComponent(trip.destination);
+  const checkIn = new Date();
+  checkIn.setDate(checkIn.getDate() + 30);
+  const checkOut = new Date(checkIn);
+  checkOut.setDate(checkOut.getDate() + trip.duration_days);
+
+  const formatDate = (d: Date) => d.toISOString().split("T")[0];
+
+  const links = [
+    {
+      label: "Google Flights",
+      icon: "✈",
+      color: "#60a5fa",
+      url: `https://www.google.com/travel/flights?q=flights+to+${dest}`,
+    },
+    {
+      label: "Booking.com",
+      icon: "🏨",
+      color: "#06b6d4",
+      url: `https://www.booking.com/search.html?ss=${destFull}&checkin=${formatDate(checkIn)}&checkout=${formatDate(checkOut)}`,
+    },
+    {
+      label: "Airbnb",
+      icon: "🏠",
+      color: "#f59e0b",
+      url: `https://www.airbnb.com/s/${destFull}/homes?checkin=${formatDate(checkIn)}&checkout=${formatDate(checkOut)}`,
+    },
+    {
+      label: "TripAdvisor",
+      icon: "⭐",
+      color: "#34d399",
+      url: `https://www.tripadvisor.com/Search?q=${destFull}`,
+    },
+  ];
+
+return (
+  <div>
+    <p className="text-[10px] font-medium tracking-widest uppercase text-gray-600 mb-3">
+      Book & Explore
+    </p>
+
+    <div className="space-y-2">
+      {links.map((link) => (
+        <a
+          key={link.label}
+          href={link.url}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all duration-200 group"
+          style={{
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.06)",
+            color: "#6b7280",
+            textDecoration: "none",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = `${link.color}11`;
+            e.currentTarget.style.borderColor = `${link.color}33`;
+            e.currentTarget.style.color = link.color;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)";
+            e.currentTarget.style.color = "#6b7280";
+          }}
+        >
+          <span>{link.icon}</span>
+          <span>{link.label}</span>
+          <span className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+            →
+          </span>
+        </a>
+      ))}
+    </div>
+
+    <p className="text-[10px] text-gray-700 mt-2">
+      Dates estimated based on trip duration
+    </p>
+  </div>
+);
+}
 
 export function TripWorkspace({ trip }: { trip: Trip }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -526,6 +609,11 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
 
           {/* Divider */}
           <div className="h-px bg-gray-800" />
+
+          <div className="h-px bg-gray-800" />
+<BookingLinks trip={trip} />
+
+<div className="h-px bg-gray-800" />
 
           {/* Stats */}
           <div>
