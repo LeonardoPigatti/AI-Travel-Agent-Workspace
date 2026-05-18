@@ -154,6 +154,32 @@ function AgentStatus({ activeAgent, loading }: { activeAgent: string; loading: b
   );
 }
 
+function DestinationMap({ destination }: { destination: string }) {
+  const query = encodeURIComponent(destination);
+  return (
+    <div>
+      <p className="text-[10px] font-medium tracking-widest uppercase text-gray-600 mb-3">
+        Location
+      </p>
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{ border: "1px solid rgba(255,255,255,0.07)" }}
+      >
+        <iframe
+          src={`https://maps.google.com/maps?q=${query}&z=10&output=embed&hl=en`}
+          width="100%"
+          height="180"
+          style={{ border: 0, filter: "invert(90%) hue-rotate(180deg)" }}
+          allowFullScreen={false}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+      </div>
+    </div>
+  );
+}
+
+
 export function TripWorkspace({ trip }: { trip: Trip }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -494,6 +520,9 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
             </p>
             <AgentStatus activeAgent={activeAgent} loading={loading} />
           </div>
+
+          <div className="h-px bg-gray-800" />
+<DestinationMap destination={trip.destination} />
 
           {/* Divider */}
           <div className="h-px bg-gray-800" />
