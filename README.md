@@ -354,7 +354,6 @@ Decouples business logic (services) from data access (repositories). The service
 - [ ] Agent confidence scores and source citations
 
 ### v0.4 — Export & Share
-- [ ] PDF itinerary export
 - [ ] Shareable trip links
 - [ ] Email itinerary delivery
 
