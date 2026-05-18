@@ -39,7 +39,6 @@ function TypingIndicator({ agentName }: { agentName: string }) {
 
 function AgentMessage({ msg, isStreaming }: { msg: ChatMessage; isStreaming?: boolean }) {
   const cfg = AGENT_CONFIG[msg.agent_name ?? "Coordinator"] ?? AGENT_CONFIG.Coordinator;
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -55,14 +54,11 @@ function AgentMessage({ msg, isStreaming }: { msg: ChatMessage; isStreaming?: bo
           boxShadow: `0 0 24px ${cfg.glow}, inset 0 1px 0 rgba(255,255,255,0.03)`,
         }}
       >
-        {/* Left accent bar */}
         <div
           className="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-xl"
           style={{ background: `linear-gradient(180deg, ${cfg.color}, ${cfg.color}44)` }}
         />
-
         <div className="pl-5 pr-4 py-4">
-          {/* Agent header */}
           <div className="flex items-center gap-2 mb-3">
             <span className="text-sm" style={{ color: cfg.color }}>{cfg.icon}</span>
             <span className="text-xs font-medium tracking-widest uppercase" style={{ color: cfg.color }}>
@@ -70,8 +66,6 @@ function AgentMessage({ msg, isStreaming }: { msg: ChatMessage; isStreaming?: bo
             </span>
             <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${cfg.color}33, transparent)` }} />
           </div>
-
-          {/* Content */}
           <div className="text-[13px] leading-relaxed" style={{ color: "#d1d5db" }}>
             <MarkdownRenderer content={msg.content} />
             {isStreaming && (
@@ -121,7 +115,7 @@ function AgentStatus({ activeAgent, loading }: { activeAgent: string; loading: b
             key={key}
             className="flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-300"
             style={{
-              background: isActive ? `${cfg.glow}` : "transparent",
+              background: isActive ? cfg.glow : "transparent",
               border: isActive ? `1px solid ${cfg.color}33` : "1px solid transparent",
             }}
           >
@@ -186,7 +180,6 @@ function BookingLinks({ trip }: { trip: Trip }) {
   checkIn.setDate(checkIn.getDate() + 30);
   const checkOut = new Date(checkIn);
   checkOut.setDate(checkOut.getDate() + trip.duration_days);
-
   const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
   const links = [
@@ -229,7 +222,7 @@ return (
           href={link.url}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all duration-200 group"
+          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all duration-200"
           style={{
             background: "rgba(255,255,255,0.03)",
             border: "1px solid rgba(255,255,255,0.06)",
@@ -248,10 +241,8 @@ return (
           }}
         >
           <span>{link.icon}</span>
-          <span>{link.label}</span>
-          <span className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-            →
-          </span>
+          <span className="ml-1">{link.label}</span>
+          <span className="ml-auto">→</span>
         </a>
       ))}
     </div>
@@ -270,6 +261,7 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [activeAgent, setActiveAgent] = useState("Coordinator");
+  const [copied, setCopied] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -293,6 +285,13 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  function copyShareLink() {
+    const url = `${window.location.origin}/share/${trip.id}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   async function handleSend() {
     if (!input.trim() || loading) return;
@@ -388,25 +387,54 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-xs text-gray-500">
-          <span>{trip.destination}</span>
-          <span className="text-gray-700">·</span>
-          <span>{trip.duration_days}d</span>
-          <span className="text-gray-700">·</span>
-          <span>{trip.currency} {Number(trip.budget).toLocaleString()}</span>
-          {sessionId && (
-            <>
-              <span className="text-gray-700">·</span>
-              <div className="flex items-center gap-1.5">
-                <motion.div
-                  className="w-1 h-1 rounded-full bg-emerald-400"
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                />
-                <span className="text-emerald-500">live</span>
-              </div>
-            </>
-          )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={copyShareLink}
+            className="px-3 py-1 rounded-lg text-xs transition-all duration-200"
+            style={{
+              background: copied ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.05)",
+              border: copied ? "1px solid rgba(16,185,129,0.3)" : "1px solid rgba(255,255,255,0.08)",
+              color: copied ? "#34d399" : "#9ca3af",
+            }}
+          >
+            {copied ? "Copied!" : "Share"}
+          </button>
+
+<a
+  href={`http://localhost:8000/api/v1/export/trips/${trip.id}/pdf`}
+  target="_blank"
+  rel="noreferrer"
+  className="px-3 py-1 rounded-lg text-xs"
+  style={{
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    color: "#9ca3af",
+    textDecoration: "none",
+  }}
+>
+  Export PDF
+</a>
+
+          <div className="flex items-center gap-3 text-xs text-gray-500 ml-2">
+            <span>{trip.destination}</span>
+            <span className="text-gray-700">·</span>
+            <span>{trip.duration_days}d</span>
+            <span className="text-gray-700">·</span>
+            <span>{trip.currency} {Number(trip.budget).toLocaleString()}</span>
+            {sessionId && (
+              <>
+                <span className="text-gray-700">·</span>
+                <div className="flex items-center gap-1.5">
+                  <motion.div
+                    className="w-1 h-1 rounded-full bg-emerald-400"
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                  <span className="text-emerald-500">live</span>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -517,7 +545,6 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
                 background: "rgba(255,255,255,0.04)",
                 border: "1px solid rgba(255,255,255,0.08)",
               }}
-              onFocus={() => {}}
             >
               <input
                 ref={inputRef}
@@ -567,8 +594,6 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
           className="w-64 shrink-0 flex flex-col gap-6 px-4 py-6 overflow-y-auto"
           style={{ borderLeft: "1px solid rgba(255,255,255,0.05)" }}
         >
-
-          {/* Trip details */}
           <div>
             <p className="text-[10px] font-medium tracking-widest uppercase text-gray-600 mb-3">
               Mission Brief
@@ -593,10 +618,8 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
             </div>
           </div>
 
-          {/* Divider */}
           <div className="h-px bg-gray-800" />
 
-          {/* Agent status */}
           <div>
             <p className="text-[10px] font-medium tracking-widest uppercase text-gray-600 mb-3">
               Agent Status
@@ -605,17 +628,15 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
           </div>
 
           <div className="h-px bg-gray-800" />
-<DestinationMap destination={trip.destination} />
 
-          {/* Divider */}
-          <div className="h-px bg-gray-800" />
+          <DestinationMap destination={trip.destination} />
 
           <div className="h-px bg-gray-800" />
-<BookingLinks trip={trip} />
 
-<div className="h-px bg-gray-800" />
+          <BookingLinks trip={trip} />
 
-          {/* Stats */}
+          <div className="h-px bg-gray-800" />
+
           <div>
             <p className="text-[10px] font-medium tracking-widest uppercase text-gray-600 mb-3">
               Session
@@ -627,34 +648,13 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
               </div>
               <div className="flex justify-between">
                 <span className="text-[11px] text-gray-600">Status</span>
-                <span className="text-[11px]" style={{ color: sessionId ? "#34d399" : "#6b7280" }}>
+                <span
+                  className="text-[11px]"
+                  style={{ color: sessionId ? "#34d399" : "#6b7280" }}
+                >
                   {sessionId ? "Active" : "New"}
                 </span>
               </div>
-              <button
-  onClick={async () => {
-    window.open(
-      `http://localhost:8000/api/v1/export/trips/${trip.id}/pdf`,
-      "_blank"
-    );
-  }}
-  className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs transition-all duration-200"
-  style={{
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    color: "#9ca3af",
-  }}
-  onMouseEnter={(e) => {
-    e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-    e.currentTarget.style.color = "#e5e7eb";
-  }}
-  onMouseLeave={(e) => {
-    e.currentTarget.style.background = "rgba(255,255,255,0.05)";
-    e.currentTarget.style.color = "#9ca3af";
-  }}
->
-  ↓ Export PDF
-</button>
             </div>
           </div>
         </div>
