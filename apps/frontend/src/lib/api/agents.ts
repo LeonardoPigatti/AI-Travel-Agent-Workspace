@@ -9,13 +9,14 @@ export interface SessionHistory {
   messages: ChatMessage[];
 }
 
-export async function getSessionHistory(tripId: string): Promise<SessionHistory> {
-  const res = await fetch(
-    `http://localhost:8000/api/v1/agents/sessions/${tripId}`
-  );
-  if (!res.ok) return { session_id: null, messages: [] };
-  return res.json();
-}
+const NODE_PREFIXES = [
+  "coordinator_node",
+  "destination_node",
+  "budget_node",
+  "hotel_node",
+  "itinerary_node",
+  "router_node",
+];
 
 export async function runAgent(
   tripId: string,
@@ -61,10 +62,27 @@ export async function runAgent(
         agentName = data.slice(7, -1);
         continue;
       }
-      onToken(data);
+let token = data;
+for (const prefix of NODE_PREFIXES) {
+  if (token.startsWith(prefix)) {
+    token = token.slice(prefix.length);
+    break;
+  }
+}
+if (token) onToken(token);
+
     }
   }
 }
+
+export async function getSessionHistory(tripId: string): Promise<SessionHistory> {
+  const res = await fetch(
+    `http://localhost:8000/api/v1/agents/sessions/${tripId}`
+  );
+  if (!res.ok) return { session_id: null, messages: [] };
+  return res.json();
+}
+
 export async function saveAgentMessage(
   sessionId: string,
   agentName: string,

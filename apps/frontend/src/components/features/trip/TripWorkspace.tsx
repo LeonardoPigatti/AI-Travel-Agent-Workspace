@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { MarkdownRenderer } from "@/lib/utils/markdown";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -69,20 +70,17 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
             return updated;
           });
         },
-(newSessionId, agentName) => {
-  setSessionId(newSessionId);
-  setMessages((prev) => {
-    const updated = [...prev];
-    const lastMsg = updated[updated.length - 1];
-    const updatedMsg = { ...lastMsg, agent_name: agentName };
-    updated[updated.length - 1] = updatedMsg;
-
-    // Salva no banco após streaming completo
-    saveAgentMessage(newSessionId, agentName, lastMsg.content);
-
-    return updated;
-  });
-},
+        (newSessionId, agentName) => {
+          setSessionId(newSessionId);
+          setMessages((prev) => {
+            const updated = [...prev];
+            const lastMsg = updated[updated.length - 1];
+            const updatedMsg = { ...lastMsg, agent_name: agentName };
+            updated[updated.length - 1] = updatedMsg;
+            saveAgentMessage(newSessionId, agentName, lastMsg.content);
+            return updated;
+          });
+        },
       );
     } catch {
       setMessages((prev) => {
@@ -125,9 +123,7 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
             <div className="p-4 border-b flex items-center justify-between">
               <h2 className="font-semibold">AI Agent Chat</h2>
               {sessionId && (
-                <span className="text-xs text-muted-foreground">
-                  Session active
-                </span>
+                <span className="text-xs text-muted-foreground">Session active</span>
               )}
             </div>
 
@@ -149,23 +145,28 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
                     className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-lg px-4 py-2 text-sm ${
+                      className={`max-w-[80%] rounded-lg px-4 py-3 text-sm ${
                         msg.role === "user"
                           ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-foreground"
+                          : "bg-muted text-foreground border border-border"
                       }`}
                     >
                       {msg.role === "agent" && (
-                        <div className="text-xs font-medium mb-1 opacity-70">
+                        <div className="text-xs font-semibold mb-2 opacity-60">
                           {msg.agent_name ?? "Agent"}
                         </div>
                       )}
-                      <div className="whitespace-pre-wrap">
-                        {msg.content}
-                        {loading && i === messages.length - 1 && msg.role === "agent" && (
-                          <span className="inline-block w-1 h-4 ml-1 bg-current animate-pulse" />
-                        )}
-                      </div>
+
+                      {msg.role === "agent" ? (
+                        <div className="space-y-1">
+                          <MarkdownRenderer content={msg.content} />
+                          {loading && i === messages.length - 1 && (
+                            <span className="inline-block w-1 h-4 bg-foreground animate-pulse" />
+                          )}
+                        </div>
+                      ) : (
+                        <span className="leading-relaxed">{msg.content}</span>
+                      )}
                     </div>
                   </div>
                 ))

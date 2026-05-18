@@ -1,7 +1,6 @@
 import sys
 import uuid
 from pathlib import Path
-from app.schemas.agent import AgentRunRequest, SaveMessageRequest
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -9,50 +8,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.schemas.agent import AgentRunRequest
+from app.schemas.agent import AgentRunRequest, SaveMessageRequest
 from app.models.trip import AgentSession, Message
 from app.repositories.trip_repository import TripRepository
 
 sys.path.insert(0, str(Path(__file__).parents[6] / "services" / "ai-agents"))
 
 router = APIRouter(prefix="/agents", tags=["agents"])
-
-@router.get("/sessions/{trip_id}")
-async def get_session_messages(
-    trip_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-):
-    from sqlalchemy.orm import selectinload
-
-    result = await db.execute(
-        select(AgentSession)
-        .where(AgentSession.trip_id == trip_id)
-        .order_by(AgentSession.created_at.desc())
-        .limit(1)
-    )
-    session = result.scalar_one_or_none()
-
-    if not session:
-        return {"session_id": None, "messages": []}
-
-    messages_result = await db.execute(
-        select(Message)
-        .where(Message.session_id == session.id)
-        .order_by(Message.created_at.asc())
-    )
-    messages = messages_result.scalars().all()
-
-    return {
-        "session_id": str(session.id),
-        "messages": [
-            {
-                "role": msg.role,
-                "content": msg.content,
-                "agent_name": msg.agent_name,
-            }
-            for msg in messages
-        ],
-    }
 
 NODE_NAME_MAP = {
     "destination_node": "Destination",
@@ -61,6 +23,8 @@ NODE_NAME_MAP = {
     "itinerary_node": "Itinerary",
     "coordinator_node": "Coordinator",
 }
+
+NODE_NAMES = set(NODE_NAME_MAP.keys()) | {"router_node"}
 
 
 @router.post("/run")
@@ -139,8 +103,14 @@ async def run_agent(
                 chunk = event["data"]["chunk"]
                 token = chunk.content
                 if token:
-                    full_response += token
-                    yield f"data: {token}\n\n"
+                    # Remove prefixo de nome de nó colado ao token
+                    for node_name in NODE_NAMES:
+                        if token.startswith(node_name):
+                            token = token[len(node_name):]
+                            break
+                    if token:
+                        full_response += token
+                        yield f"data: {token}\n\n"
 
         yield f"data: [DONE]\n\n"
         yield f"data: [SESSION:{session_id}]\n\n"
@@ -153,6 +123,43 @@ async def run_agent(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.get("/sessions/{trip_id}")
+async def get_session_messages(
+    trip_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(AgentSession)
+        .where(AgentSession.trip_id == trip_id)
+        .order_by(AgentSession.created_at.desc())
+        .limit(1)
+    )
+    session = result.scalar_one_or_none()
+
+    if not session:
+        return {"session_id": None, "messages": []}
+
+    messages_result = await db.execute(
+        select(Message)
+        .where(Message.session_id == session.id)
+        .order_by(Message.created_at.asc())
+    )
+    messages = messages_result.scalars().all()
+
+    return {
+        "session_id": str(session.id),
+        "messages": [
+            {
+                "role": msg.role,
+                "content": msg.content,
+                "agent_name": msg.agent_name,
+            }
+            for msg in messages
+        ],
+    }
+
 
 @router.post("/sessions/{session_id}/messages")
 async def save_agent_message(
