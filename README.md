@@ -14,38 +14,28 @@ VoyageAI is a full-stack SaaS application where specialized AI agents work toget
 ## Screenshots
 
 ### Landing Page
-<!-- Adicione aqui um print da página inicial (http://localhost:3000) -->
-![Landing Page](docs/screenshots/landing.png)
+<img width="1920" height="1080" alt="Captura de tela 2026-05-18 022533" src="https://github.com/user-attachments/assets/898b7442-9c78-46e8-8aec-a12eaacb8b3b" />
+<img width="1920" height="1080" alt="Captura de tela 2026-05-18 022545" src="https://github.com/user-attachments/assets/6c29c582-522a-411d-a550-1441e5516097" />
 
 ---
 
 ### Trip List
-<!-- Adicione aqui um print da lista de viagens (http://localhost:3000/trips) -->
-![Trip List](docs/screenshots/trips.png)
+<img width="1920" height="1080" alt="Captura de tela 2026-05-18 022613" src="https://github.com/user-attachments/assets/a228c673-293a-4c8a-9910-5d9ce36a4770" />
 
 ---
 
 ### Create Trip
-<!-- Adicione aqui um print do formulário de criação -->
-![Create Trip](docs/screenshots/new-trip.png)
+<img width="1920" height="1080" alt="Captura de tela 2026-05-18 022900" src="https://github.com/user-attachments/assets/3fcb005c-b707-4b3a-a415-4aaaf72526a4" />
+<img width="1920" height="1080" alt="Captura de tela 2026-05-18 023151" src="https://github.com/user-attachments/assets/41df31c6-be63-4d3e-9073-11d240137d1d" />
+
 
 ---
 
 ### AI Agent Workspace
-<!-- Adicione aqui um print do workspace com o chat funcionando -->
-![Workspace](docs/screenshots/workspace.png)
+<img width="1920" height="1080" alt="Captura de tela 2026-05-18 024033" src="https://github.com/user-attachments/assets/a9ca0842-6ba2-45af-ae3b-729ab8aeaa21" />
+<img width="1920" height="1080" alt="Captura de tela 2026-05-18 023451" src="https://github.com/user-attachments/assets/7bdf97fc-4869-4fc0-839f-f055682e318a" />
+<img width="1920" height="1080" alt="Captura de tela 2026-05-18 023300" src="https://github.com/user-attachments/assets/ecec127a-6b3f-46b7-83b9-ee6953db8cac" />
 
----
-
-### Multi-Agent Chat
-<!-- Adicione aqui um print mostrando diferentes agentes respondendo (Destination, Budget, Hotel, Itinerary) -->
-![Multi-Agent Chat](docs/screenshots/agents-chat.png)
-
----
-
-### API Documentation
-<!-- Adicione aqui um print do Swagger UI (http://localhost:8000/api/docs) -->
-![API Docs](docs/screenshots/api-docs.png)
 
 ---
 
@@ -59,13 +49,13 @@ VoyageAI is a full-stack SaaS application where specialized AI agents work toget
                        ▼
 ┌─────────────────────────────────────────────────────────┐
 │              Next.js 16 — App Router                     │
-│     Landing · Trip List · New Trip · Workspace           │
+│  Landing · Trip List · New Trip · Workspace · Share      │
 └─────────────────────┬───────────────────────────────────┘
                        │ REST + SSE
                        ▼
 ┌─────────────────────────────────────────────────────────┐
 │              FastAPI — Python 3.12                        │
-│     /api/v1/trips   ·   /api/v1/agents                   │
+│     /api/v1/trips  ·  /api/v1/agents  ·  /api/v1/export │
 │     SQLAlchemy · Alembic · Pydantic                      │
 └──────────┬──────────────────────────┬───────────────────┘
            │                          │
@@ -117,13 +107,15 @@ User Message
 | Layer | Technology | Why |
 |---|---|---|
 | Frontend | Next.js 16, TypeScript | App Router, Server Components, type safety |
-| Styling | TailwindCSS, shadcn/ui | Rapid UI development, accessible components |
+| Styling | TailwindCSS v4, shadcn/ui, Framer Motion | Premium UI, animations, accessible components |
 | Backend | FastAPI, Python 3.12 | Async-native, auto OpenAPI, Pydantic |
 | ORM | SQLAlchemy 2.0, Alembic | Async queries, typed models, migrations |
 | AI Orchestration | LangGraph, LangChain | Graph-based multi-agent workflows |
 | LLM | Groq (LLaMA 3.3 70b) | 10x faster inference than OpenAI for dev |
 | Database | PostgreSQL 16 + pgvector | Relational + vector storage in one service |
 | Cache | Redis 7 | Session state, rate limiting |
+| PDF | ReportLab | Server-side PDF generation, no system deps |
+| Images | Pexels API | Real destination photos |
 | Infra | Docker Compose, Nginx | One-command setup, reverse proxy with SSE |
 
 ---
@@ -136,12 +128,13 @@ User Message
 - [Python 3.12](https://www.python.org/downloads/release/python-31210/)
 - [Node.js 20+](https://nodejs.org)
 - [Groq API Key](https://console.groq.com) — free tier available
+- [Pexels API Key](https://www.pexels.com/api/) — free tier available
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/voyageai.git
-cd voyageai
+git clone https://github.com/LeonardoPigatti/AI-Travel-Agent-Workspace.git
+cd AI-Travel-Agent-Workspace
 ```
 
 ### 2. Configure environment
@@ -155,6 +148,12 @@ Open `.env` and fill in your keys:
 ```env
 GROQ_API_KEY=gsk_your_key_here
 SECRET_KEY=your_secret_key_here
+```
+
+Create `apps/frontend/.env.local`:
+
+```env
+NEXT_PUBLIC_PEXELS_API_KEY=your_pexels_key_here
 ```
 
 ### 3. Start infrastructure
@@ -203,33 +202,32 @@ npm run dev
 
 ---
 
-## Usage
+## Features
 
-### Creating a trip
-
-<!-- Adicione aqui um GIF ou sequência de prints mostrando o fluxo completo:
-     1. Clicar em "New Trip"
-     2. Preencher o formulário
-     3. Ser redirecionado para o workspace -->
-
-1. Go to http://localhost:3000
-2. Click **Get Started** or **Plan a Trip**
-3. Fill in destination, duration, budget and preferences
-4. Click **Create Trip** — you'll be redirected to the workspace
-
-### Chatting with agents
-
-<!-- Adicione aqui prints mostrando cada agente respondendo com seu nome -->
-
-Each message is automatically routed to the best agent:
+### AI Agent Chat
+Each message is automatically routed to the best specialist agent:
 
 | Ask about | Agent |
 |---|---|
-| Attractions, culture, tips | 🗺️ Destination Agent |
-| Costs, budget breakdown | 💰 Budget Agent |
-| Hotels, neighborhoods | 🏨 Hotel Agent |
-| Day-by-day schedule | 📅 Itinerary Agent |
-| General questions | 🤖 Coordinator Agent |
+| Attractions, culture, tips | ◎ Destination Agent |
+| Costs, budget breakdown | ◈ Budget Agent |
+| Hotels, neighborhoods | ◇ Hotel Agent |
+| Day-by-day schedule | ◉ Itinerary Agent |
+| General questions | ⬡ Coordinator Agent |
+
+### Workspace
+- Real-time streaming chat with token-by-token SSE responses
+- Persistent session history — reopen a trip and continue where you left off
+- Google Maps embed in dark mode showing the destination
+- Booking links for Google Flights, Booking.com, Airbnb and TripAdvisor with pre-filled dates
+- Export itinerary as a formatted PDF
+- Share trip via public read-only link
+
+### Trip Management
+- Create trips with destination, duration, budget and preferences
+- Live destination photo preview powered by Pexels API
+- Quick start suggestions for popular destinations
+- Trip list with real destination photos
 
 ---
 
@@ -253,6 +251,12 @@ GET    /api/v1/agents/sessions/{trip_id}        Get chat history for a trip
 POST   /api/v1/agents/sessions/{id}/messages    Save agent message
 ```
 
+### Export
+
+```
+GET    /api/v1/export/trips/{id}/pdf            Export trip as PDF
+```
+
 ### Health
 
 ```
@@ -268,26 +272,29 @@ voyageai/
 ├── apps/
 │   ├── frontend/                  # Next.js 16 App Router
 │   │   └── src/
-│   │       ├── app/               # Pages and routing
-│   │       │   ├── page.tsx       # Landing page
-│   │       │   ├── trips/         # Trip list
-│   │       │   │   ├── new/       # Create trip form
-│   │       │   │   └── [id]/      # Trip workspace
+│   │       ├── app/
+│   │       │   ├── page.tsx           # Landing page
+│   │       │   ├── trips/             # Trip list
+│   │       │   │   ├── new/           # Create trip form
+│   │       │   │   └── [id]/          # Trip workspace
+│   │       │   └── share/[id]/        # Public share page
 │   │       ├── components/
-│   │       │   ├── ui/            # shadcn components
-│   │       │   └── features/
-│   │       │       └── trip/      # TripWorkspace
+│   │       │   ├── ui/                # shadcn components
+│   │       │   └── features/trip/
+│   │       │       ├── TripWorkspace.tsx
+│   │       │       └── ShareWorkspace.tsx
 │   │       ├── lib/
-│   │       │   └── api/           # API clients
-│   │       └── types/             # TypeScript types
+│   │       │   ├── api/               # trips, agents, pexels clients
+│   │       │   └── utils/markdown.tsx # Custom markdown renderer
+│   │       └── types/trip.ts
 │   │
 │   └── backend/                   # FastAPI
 │       └── app/
-│           ├── api/v1/routes/     # trips.py, agents.py
+│           ├── api/v1/routes/     # trips.py, agents.py, export.py
 │           ├── core/              # config.py, database.py
 │           ├── models/            # SQLAlchemy ORM
 │           ├── schemas/           # Pydantic DTOs
-│           ├── services/          # Business logic
+│           ├── services/          # pdf_service.py
 │           └── repositories/      # DB access layer
 │
 ├── services/
@@ -300,16 +307,14 @@ voyageai/
 │       │   ├── hotel.py
 │       │   └── itinerary.py
 │       └── graph/
-│           ├── state.py           # TripPlanningState
-│           └── workflow.py        # LangGraph + routing
+│           ├── state.py           # TripPlanningState TypedDict
+│           └── workflow.py        # LangGraph + LLM router
 │
 ├── infrastructure/
 │   ├── docker/                    # Dockerfiles
-│   └── nginx/                     # nginx.conf
+│   └── nginx/nginx.conf           # Reverse proxy + SSE config
 │
-├── docs/
-│   └── screenshots/               # Add your screenshots here
-│
+├── docs/screenshots/
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -329,7 +334,11 @@ Development velocity. Groq's LPU delivers ~10x faster inference than OpenAI API 
 
 ### Why SSE over WebSockets?
 
-Server-Sent Events are HTTP-native, work through proxies without special configuration, and are sufficient for unidirectional streaming (server → client). WebSockets add handshake complexity and stateful connections without benefit for this use case.
+Server-Sent Events are HTTP-native, work through proxies without special configuration, and are sufficient for unidirectional streaming (server → client). WebSockets add handshake complexity and stateful connections without benefit for this use case. Nginx is configured with `proxy_buffering off` to prevent buffering the stream at the edge.
+
+### Why ReportLab over WeasyPrint?
+
+WeasyPrint requires GTK system libraries unavailable on Windows without complex setup. ReportLab is pure Python with no system dependencies — works identically on Windows, macOS and Linux.
 
 ### Why pgvector in PostgreSQL?
 
@@ -353,14 +362,8 @@ Decouples business logic (services) from data access (repositories). The service
 - [ ] Parallel agent execution for faster responses
 - [ ] Agent confidence scores and source citations
 
-### v0.4 — Export & Share
-- [ ] Shareable trip links
-- [ ] Email itinerary delivery
-
-### v0.5 — Integrations
-- [ ] Google Flights price lookup
-- [ ] Booking.com hotel availability
-- [ ] Google Maps integration
+### v0.4 — Delivery
+- [ ] Email itinerary delivery via Resend
 
 ### v1.0 — Production
 - [ ] Kubernetes deployment
@@ -369,7 +372,6 @@ Decouples business logic (services) from data access (repositories). The service
 - [ ] Mobile app (React Native)
 
 ---
-
 
 ## License
 
