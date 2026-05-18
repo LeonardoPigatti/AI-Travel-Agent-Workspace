@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { tripsApi } from "@/lib/api/trips";
+import { getDestinationImage } from "@/lib/api/pexels";
 
 const SUGGESTIONS = [
   { destination: "Tokyo, Japan", title: "Japanese Gastronomy", days: 7, budget: 15000 },
@@ -23,23 +24,26 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 function DestinationPreview({ destination }: { destination: string }) {
-  const [imgKey, setImgKey] = useState(0);
+  const [imageUrl, setImageUrl] = useState("");
   const [loaded, setLoaded] = useState(false);
-  const debouncedDest = useDebounce(destination, 600);
+  const debouncedDest = useDebounce(destination, 800);
 
   useEffect(() => {
     if (debouncedDest.length > 2) {
       setLoaded(false);
-      setImgKey((k) => k + 1);
+      setImageUrl("");
+      getDestinationImage(debouncedDest).then((url) => {
+        setImageUrl(url);
+      });
+    } else {
+      setImageUrl("");
+      setLoaded(false);
     }
   }, [debouncedDest]);
 
-  const keyword = debouncedDest.split(",")[0].trim().toLowerCase().replace(/\s+/g, "-");
-  const imageUrl = `https://source.unsplash.com/800x1000/?${keyword},travel,landmark`;
-
   return (
     <div
-      className="relative h-full rounded-2xl overflow-hidden"
+      className="relative rounded-2xl overflow-hidden"
       style={{
         background: "#0d0d0d",
         border: "1px solid rgba(255,255,255,0.07)",
@@ -47,9 +51,9 @@ function DestinationPreview({ destination }: { destination: string }) {
       }}
     >
       <AnimatePresence>
-        {debouncedDest.length > 2 ? (
+        {imageUrl ? (
           <motion.div
-            key={imgKey}
+            key={imageUrl}
             initial={{ opacity: 0 }}
             animate={{ opacity: loaded ? 1 : 0 }}
             exit={{ opacity: 0 }}
@@ -57,7 +61,6 @@ function DestinationPreview({ destination }: { destination: string }) {
             className="absolute inset-0"
           >
             <img
-              key={imgKey}
               src={imageUrl}
               alt={debouncedDest}
               className="w-full h-full object-cover"
@@ -89,31 +92,31 @@ function DestinationPreview({ destination }: { destination: string }) {
             exit={{ opacity: 0 }}
             className="absolute inset-0 flex flex-col items-center justify-center text-center p-8"
           >
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl mb-4"
-              style={{
-                background: "rgba(37,99,235,0.08)",
-                border: "1px solid rgba(37,99,235,0.15)",
-              }}
-            >
-              🌍
-            </div>
-            <p className="text-sm text-gray-500">
-              Type a destination to see a preview
-            </p>
+            {debouncedDest.length > 2 ? (
+              <motion.div
+                className="w-8 h-8 border border-gray-700 border-t-gray-400 rounded-full"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+              />
+            ) : (
+              <>
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl mb-4"
+                  style={{
+                    background: "rgba(37,99,235,0.08)",
+                    border: "1px solid rgba(37,99,235,0.15)",
+                  }}
+                >
+                  🌍
+                </div>
+                <p className="text-sm text-gray-500">
+                  Type a destination to see a preview
+                </p>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Loading shimmer */}
-      {debouncedDest.length > 2 && !loaded && (
-        <motion.div
-          className="absolute inset-0"
-          style={{ background: "#0d0d0d" }}
-          animate={{ opacity: [0.5, 0.8, 0.5] }}
-          transition={{ duration: 1.2, repeat: Infinity }}
-        />
-      )}
     </div>
   );
 }
@@ -255,8 +258,14 @@ export default function NewTripPage() {
                     background: "rgba(255,255,255,0.04)",
                     border: "1px solid rgba(255,255,255,0.08)",
                   }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(37,99,235,0.4)"; e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(37,99,235,0.4)";
+                    e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                    e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                  }}
                 />
               </div>
 
@@ -275,8 +284,14 @@ export default function NewTripPage() {
                     background: "rgba(255,255,255,0.04)",
                     border: "1px solid rgba(255,255,255,0.08)",
                   }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(37,99,235,0.4)"; e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(37,99,235,0.4)";
+                    e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                    e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                  }}
                 />
               </div>
 
@@ -300,18 +315,29 @@ export default function NewTripPage() {
                         background: "rgba(255,255,255,0.04)",
                         border: "1px solid rgba(255,255,255,0.08)",
                       }}
-                      onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(37,99,235,0.4)"; e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
-                      onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = "rgba(37,99,235,0.4)";
+                        e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                        e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                      }}
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-600">days</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-600">
+                      days
+                    </span>
                   </div>
                 </div>
+
                 <div>
                   <label className="block text-[11px] font-medium tracking-widest uppercase text-gray-600 mb-2">
                     Budget (BRL)
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-600">R$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-600">
+                      R$
+                    </span>
                     <input
                       value={form.budget}
                       onChange={(e) => set("budget", e.target.value)}
@@ -324,8 +350,14 @@ export default function NewTripPage() {
                         background: "rgba(255,255,255,0.04)",
                         border: "1px solid rgba(255,255,255,0.08)",
                       }}
-                      onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(37,99,235,0.4)"; e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
-                      onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = "rgba(37,99,235,0.4)";
+                        e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                        e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                      }}
                     />
                   </div>
                 </div>
@@ -334,7 +366,8 @@ export default function NewTripPage() {
               {/* Preferences */}
               <div>
                 <label className="block text-[11px] font-medium tracking-widest uppercase text-gray-600 mb-2">
-                  Preferences <span className="text-gray-700 normal-case tracking-normal">(optional)</span>
+                  Preferences{" "}
+                  <span className="text-gray-700 normal-case tracking-normal">(optional)</span>
                 </label>
                 <textarea
                   value={form.preferences}
@@ -346,8 +379,14 @@ export default function NewTripPage() {
                     background: "rgba(255,255,255,0.04)",
                     border: "1px solid rgba(255,255,255,0.08)",
                   }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(37,99,235,0.4)"; e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(37,99,235,0.4)";
+                    e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                    e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                  }}
                 />
               </div>
 
@@ -356,7 +395,10 @@ export default function NewTripPage() {
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="px-4 py-3 rounded-xl text-xs text-red-400"
-                  style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
+                  style={{
+                    background: "rgba(239,68,68,0.08)",
+                    border: "1px solid rgba(239,68,68,0.2)",
+                  }}
                 >
                   {error}
                 </motion.div>
@@ -371,7 +413,9 @@ export default function NewTripPage() {
                   background: isValid && !loading
                     ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
                     : "rgba(255,255,255,0.06)",
-                  boxShadow: isValid && !loading ? "0 0 24px rgba(37,99,235,0.3)" : "none",
+                  boxShadow: isValid && !loading
+                    ? "0 0 24px rgba(37,99,235,0.3)"
+                    : "none",
                 }}
               >
                 {loading ? (
@@ -402,7 +446,6 @@ export default function NewTripPage() {
             </p>
             <DestinationPreview destination={form.destination} />
 
-            {/* Summary card */}
             <AnimatePresence>
               {isValid && (
                 <motion.div

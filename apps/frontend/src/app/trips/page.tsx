@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { tripsApi } from "@/lib/api/trips";
+import { getDestinationImage } from "@/lib/api/pexels";
 import type { Trip } from "@/types/trip";
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
@@ -13,15 +14,13 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }
   archived: { color: "#4b5563", bg: "rgba(75,85,99,0.12)",    label: "Archived" },
 };
 
-// Unsplash source — busca por keyword do destino
-function getDestinationImage(destination: string): string {
-  const keyword = destination.split(",")[0].trim().toLowerCase().replace(/\s+/g, "-");
-  return `https://source.unsplash.com/1200x400/?${keyword},travel,city`;
-}
-
 function TripCard({ trip, index }: { trip: Trip; index: number }) {
   const status = STATUS_CONFIG[trip.status] ?? STATUS_CONFIG.draft;
-  const imageUrl = getDestinationImage(trip.destination);
+  const [imageUrl, setImageUrl] = useState("");
+
+  useEffect(() => {
+    getDestinationImage(trip.destination).then(setImageUrl);
+  }, [trip.destination]);
 
   return (
     <motion.div
@@ -48,12 +47,29 @@ function TripCard({ trip, index }: { trip: Trip; index: number }) {
           }}
         >
           {/* Image */}
-          <div className="relative h-52 overflow-hidden">
-            <img
-              src={imageUrl}
-              alt={trip.destination}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
+          <div className="relative h-52 overflow-hidden bg-gray-900">
+            <AnimatePresence>
+              {imageUrl ? (
+                <motion.img
+                  key={imageUrl}
+                  src={imageUrl}
+                  alt={trip.destination}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6 }}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+              ) : (
+                <motion.div
+                  key="skeleton"
+                  className="absolute inset-0"
+                  style={{ background: "#111" }}
+                  animate={{ opacity: [0.4, 0.7, 0.4] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                />
+              )}
+            </AnimatePresence>
+
             {/* Gradient overlay */}
             <div
               className="absolute inset-0"
@@ -62,12 +78,12 @@ function TripCard({ trip, index }: { trip: Trip; index: number }) {
               }}
             />
 
-            {/* Status badge — top right */}
+            {/* Status badge */}
             <div className="absolute top-3 right-3">
               <div
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium backdrop-blur-sm"
                 style={{
-                  background: `rgba(0,0,0,0.6)`,
+                  background: "rgba(0,0,0,0.6)",
                   border: `1px solid ${status.color}44`,
                   color: status.color,
                 }}
@@ -77,7 +93,7 @@ function TripCard({ trip, index }: { trip: Trip; index: number }) {
               </div>
             </div>
 
-            {/* Destination overlay — bottom of image */}
+            {/* Destination name */}
             <div className="absolute bottom-0 left-0 right-0 px-5 pb-3">
               <p className="text-xl font-semibold text-white leading-tight drop-shadow-lg">
                 {trip.destination}
@@ -101,8 +117,6 @@ function TripCard({ trip, index }: { trip: Trip; index: number }) {
                 </span>
               </div>
             </div>
-
-            {/* Arrow */}
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-600 transition-all duration-200 group-hover:text-gray-300"
               style={{
