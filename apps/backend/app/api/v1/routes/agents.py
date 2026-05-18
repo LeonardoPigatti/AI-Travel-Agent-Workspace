@@ -1,10 +1,9 @@
-import uuid
 import sys
-import os
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -12,10 +11,17 @@ from app.schemas.agent import AgentRunRequest
 from app.models.trip import AgentSession, Message
 from app.repositories.trip_repository import TripRepository
 
-# Adiciona o serviço de agentes ao path
 sys.path.insert(0, str(Path(__file__).parents[6] / "services" / "ai-agents"))
 
 router = APIRouter(prefix="/agents", tags=["agents"])
+
+NODE_NAME_MAP = {
+    "destination_node": "Destination",
+    "budget_node": "Budget",
+    "hotel_node": "Hotel",
+    "itinerary_node": "Itinerary",
+    "coordinator_node": "Coordinator",
+}
 
 
 @router.post("/run")
@@ -28,9 +34,7 @@ async def run_agent(
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
 
-    # Cria ou recupera sessão
     if request.session_id:
-        from sqlalchemy import select
         result = await db.execute(
             select(AgentSession).where(AgentSession.id == request.session_id)
         )
@@ -44,7 +48,6 @@ async def run_agent(
         await db.flush()
         await db.refresh(session)
 
-    # Salva mensagem do usuário
     user_message = Message(
         session_id=session.id,
         role="user",
@@ -54,6 +57,14 @@ async def run_agent(
     await db.flush()
 
     session_id = session.id
+    trip_data = {
+        "destination": trip.destination,
+        "duration_days": trip.duration_days,
+        "budget": float(trip.budget),
+        "currency": trip.currency,
+        "preferences": trip.preferences or "",
+        "trip_id": str(trip.id),
+    }
 
     async def stream():
         from graph.workflow import graph
@@ -61,12 +72,6 @@ async def run_agent(
 
         state = {
             "messages": [HumanMessage(content=request.message)],
-            "trip_id": str(trip.id),
-            "destination": trip.destination,
-            "duration_days": trip.duration_days,
-            "budget": float(trip.budget),
-            "currency": trip.currency,
-            "preferences": trip.preferences or "",
             "current_agent": "",
             "is_complete": False,
             "destination_research": "",
@@ -74,13 +79,23 @@ async def run_agent(
             "hotel_suggestions": "",
             "itinerary_draft": "",
             "final_itinerary": "",
+            **trip_data,
         }
 
         full_response = ""
+        agent_name = "Coordinator"
 
-        # Streaming token por token
+        yield f"data: [AGENT:{agent_name}]\n\n"
+
         async for event in graph.astream_events(state, version="v2"):
             kind = event.get("event")
+
+            if kind == "on_chain_start":
+                node = event.get("name", "")
+                if node in NODE_NAME_MAP:
+                    agent_name = NODE_NAME_MAP[node]
+                    yield f"data: [AGENT:{agent_name}]\n\n"
+
             if kind == "on_chat_model_stream":
                 chunk = event["data"]["chunk"]
                 token = chunk.content
@@ -88,15 +103,14 @@ async def run_agent(
                     full_response += token
                     yield f"data: {token}\n\n"
 
-        # Salva resposta do agente no banco
         async with db.begin_nested():
-            agent_message = Message(
+            agent_msg = Message(
                 session_id=session_id,
                 role="agent",
-                agent_name="Coordinator",
+                agent_name=agent_name,
                 content=full_response,
             )
-            db.add(agent_message)
+            db.add(agent_msg)
 
         yield f"data: [DONE]\n\n"
         yield f"data: [SESSION:{session_id}]\n\n"

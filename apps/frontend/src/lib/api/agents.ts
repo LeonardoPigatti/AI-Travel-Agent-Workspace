@@ -9,7 +9,7 @@ export async function runAgent(
   message: string,
   sessionId: string | null,
   onToken: (token: string) => void,
-  onDone: (sessionId: string) => void,
+  onDone: (sessionId: string, agentName: string) => void,
 ) {
   const res = await fetch("http://localhost:8000/api/v1/agents/run", {
     method: "POST",
@@ -25,6 +25,7 @@ export async function runAgent(
 
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();
+  let agentName = "Coordinator";
 
   while (true) {
     const { done, value } = await reader.read();
@@ -40,7 +41,11 @@ export async function runAgent(
       if (data === "[DONE]") continue;
       if (data.startsWith("[SESSION:")) {
         const id = data.slice(9, -1);
-        onDone(id);
+        onDone(id, agentName);
+        continue;
+      }
+      if (data.startsWith("[AGENT:")) {
+        agentName = data.slice(7, -1);
         continue;
       }
       onToken(data);
