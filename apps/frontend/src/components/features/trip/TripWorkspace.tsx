@@ -514,6 +514,30 @@ export function TripWorkspace({ trip }: { trip: Trip }) {
                   {sessionId ? "Active" : "New"}
                 </span>
               </div>
+              <button
+  onClick={async () => {
+    window.open(
+      `http://localhost:8000/api/v1/export/trips/${trip.id}/pdf`,
+      "_blank"
+    );
+  }}
+  className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs transition-all duration-200"
+  style={{
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    color: "#9ca3af",
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+    e.currentTarget.style.color = "#e5e7eb";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+    e.currentTarget.style.color = "#9ca3af";
+  }}
+>
+  ↓ Export PDF
+</button>
             </div>
           </div>
         </div>
